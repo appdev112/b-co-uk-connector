@@ -2,6 +2,7 @@
 
 namespace Bwise\BcoUkConnector;
 
+use Bwise\BcoUkConnector\Commands\MigrateCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -18,14 +19,19 @@ class BcoUkConnectorServiceProvider extends PackageServiceProvider
             ->name('b-co-uk-connector')
             ->hasConfigFile()
             ->hasViews()
-            ->hasMigration('create_migration_table_name_table');
+            ->hasCommand(MigrateCommand::class);
+    }
+
+    public function register(): void
+    {
+        parent::register();
+
+        $this->registerDatabaseConnection();
     }
 
     public function boot(): void
     {
         parent::boot();
-
-        $this->registerDatabaseConnection();
     }
 
     protected function registerDatabaseConnection(): void

@@ -36,7 +36,8 @@
     "autoload": {
         "psr-4": {
             "Bwise\\BcoUkConnector\\": "src/",
-            "Bwise\\BcoUkConnector\\Database\\Factories\\": "database/factories/"
+            "Bwise\\BcoUkConnector\\Models\\": "src/Models/",
+            "Bwise\\BcoUkConnector\\Database\\Migrations\\": "database/migrations/"
         }
     },
     "autoload-dev": {
