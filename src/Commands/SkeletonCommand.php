@@ -1,6 +1,6 @@
 <?php
 
-namespace VendorName\Skeleton\Commands;
+namespace Bwise\BcoUkConnector\Commands;
 
 use Illuminate\Console\Command;
 

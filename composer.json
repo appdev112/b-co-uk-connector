@@ -1,17 +1,17 @@
 {
-    "name": ":vendor_slug/:package_slug",
-    "description": ":package_description",
+    "name": "bwise-it-devs/b-co-uk-connector",
+    "description": "This package is used to connect to the B-CO UK API and the Prediction Module data.",
     "keywords": [
-        ":vendor_name",
+        "bwise-it-devs",
         "laravel",
-        ":package_slug"
+        "b-co-uk-connector"
     ],
-    "homepage": "https://github.com/:vendor_slug/:package_slug",
+    "homepage": "https://github.com/bwise-it-devs/b-co-uk-connector",
     "license": "MIT",
     "authors": [
         {
-            "name": ":author_name",
-            "email": "author@domain.com",
+            "name": "Bwise IT Devs",
+            "email": "info@bwisemedia.com",
             "role": "Developer"
         }
     ],
@@ -35,13 +35,13 @@
     },
     "autoload": {
         "psr-4": {
-            "VendorName\\Skeleton\\": "src/",
-            "VendorName\\Skeleton\\Database\\Factories\\": "database/factories/"
+            "Bwise\\BcoUkConnector\\": "src/",
+            "Bwise\\BcoUkConnector\\Database\\Factories\\": "database/factories/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "VendorName\\Skeleton\\Tests\\": "tests/",
+            "Bwise\\BcoUkConnector\\Tests\\": "tests/",
             "Workbench\\App\\": "workbench/app/"
         }
     },
@@ -63,10 +63,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "VendorName\\Skeleton\\SkeletonServiceProvider"
+                "Bwise\\BcoUkConnector\\BcoUkConnectorServiceProvider"
             ],
             "aliases": {
-                "Skeleton": "VendorName\\Skeleton\\Facades\\Skeleton"
+                "BcoUkConnector": "Bwise\\BcoUkConnector\\Facades\\BcoUkConnector"
             }
         }
     },
