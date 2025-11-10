@@ -113,7 +113,7 @@ class SyncPredictionsCommand extends Command
         }
 
         // Generate filename based on slug and locale
-        $filename = "{$prediction->slug}-{$prediction->locale}.html";
+        $filename = "{$prediction->slug}.html";
         $filePath = "{$storagePath}/{$filename}";
 
         File::put($filePath, $html);
