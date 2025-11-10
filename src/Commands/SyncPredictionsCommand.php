@@ -10,7 +10,6 @@ use Bwise\BcoUkConnector\Models\Prediction;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Vite;
 
 class SyncPredictionsCommand extends Command
 {
@@ -62,7 +61,7 @@ class SyncPredictionsCommand extends Command
                 // Generate HTML body content
                 $htmlBodyContent = view('predictions.show-plain', $predictionPageData)->render();
 
-                // Get compiled CSS from Vite
+                // Get CSS directly from app.css
                 $baseCss = $this->getBaseCss();
 
                 // Get site theme styles
@@ -155,37 +154,14 @@ class SyncPredictionsCommand extends Command
     protected function getBaseCss(): string
     {
         try {
-            // Try to get the asset URL from Vite first
-            $url = Vite::asset('resources/css/app.css');
-            $path = public_path(ltrim(parse_url($url, PHP_URL_PATH), '/'));
+            // Read CSS directly from resources/css/app.css in the package
+            $cssPath = __DIR__.'/../../resources/css/app.css';
 
-            if (File::exists($path)) {
-                return File::get($path);
+            if (File::exists($cssPath)) {
+                return File::get($cssPath);
             }
 
-            // Fallback: Read from manifest file
-            $manifestPath = public_path('build/.vite/manifest.json');
-            if (File::exists($manifestPath)) {
-                $manifest = json_decode(File::get($manifestPath), true);
-
-                if (isset($manifest['resources/css/app.css']['file'])) {
-                    $cssFile = $manifest['resources/css/app.css']['file'];
-                    $cssPath = public_path('build/'.$cssFile);
-
-                    if (File::exists($cssPath)) {
-                        return File::get($cssPath);
-                    }
-                }
-            }
-
-            // Last fallback: Try to find CSS file in build/assets directory
-            $buildAssetsPath = public_path('build/assets');
-            if (File::isDirectory($buildAssetsPath)) {
-                $files = File::glob($buildAssetsPath.'/app-*.css');
-                if (!empty($files)) {
-                    return File::get($files[0]);
-                }
-            }
+            $this->warn("  → CSS file not found at: {$cssPath}");
         } catch (\Exception $e) {
             $this->warn("  → Could not load base CSS: {$e->getMessage()}");
         }
