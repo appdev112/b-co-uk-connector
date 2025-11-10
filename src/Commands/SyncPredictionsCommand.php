@@ -5,10 +5,12 @@ namespace Bwise\BcoUkConnector\Commands;
 use App\Models\Prediction as SourcePrediction;
 use App\Services\PredictionService;
 use App\Services\SiteService;
+use App\View\Components\SiteTheme;
 use Bwise\BcoUkConnector\Models\Prediction;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Vite;
 
 class SyncPredictionsCommand extends Command
 {
@@ -60,12 +62,20 @@ class SyncPredictionsCommand extends Command
                 // Generate HTML body content
                 $htmlBodyContent = view('predictions.show-plain', $predictionPageData)->render();
 
+                // Get compiled CSS from Vite
+                $baseCss = $this->getBaseCss();
+
+                // Get site theme styles
+                $siteThemeCss = $this->getSiteThemeCss($site);
+
                 // Render full HTML using app.blade.php layout
                 $fullHtml = view('b-co-uk-connector::layouts.app', [
                     'meta_title' => $sourcePrediction->meta_title ?? $sourcePrediction->title,
                     'meta_description' => $sourcePrediction->meta_description ?? '',
                     'modified_time' => $sourcePrediction->updated_at?->toIso8601String() ?? '',
                     'content' => $htmlBodyContent,
+                    'base_css' => $baseCss,
+                    'site_theme_css' => $siteThemeCss,
                 ])->render();
 
                 // Save HTML file
@@ -140,6 +150,69 @@ class SyncPredictionsCommand extends Command
             Prediction::create($data);
             $this->line("  → Created database record");
         }
+    }
+
+    protected function getBaseCss(): string
+    {
+        try {
+            // Try to get the asset URL from Vite first
+            $url = Vite::asset('resources/css/app.css');
+            $path = public_path(ltrim(parse_url($url, PHP_URL_PATH), '/'));
+
+            if (File::exists($path)) {
+                return File::get($path);
+            }
+
+            // Fallback: Read from manifest file
+            $manifestPath = public_path('build/.vite/manifest.json');
+            if (File::exists($manifestPath)) {
+                $manifest = json_decode(File::get($manifestPath), true);
+
+                if (isset($manifest['resources/css/app.css']['file'])) {
+                    $cssFile = $manifest['resources/css/app.css']['file'];
+                    $cssPath = public_path('build/'.$cssFile);
+
+                    if (File::exists($cssPath)) {
+                        return File::get($cssPath);
+                    }
+                }
+            }
+
+            // Last fallback: Try to find CSS file in build/assets directory
+            $buildAssetsPath = public_path('build/assets');
+            if (File::isDirectory($buildAssetsPath)) {
+                $files = File::glob($buildAssetsPath.'/app-*.css');
+                if (!empty($files)) {
+                    return File::get($files[0]);
+                }
+            }
+        } catch (\Exception $e) {
+            $this->warn("  → Could not load base CSS: {$e->getMessage()}");
+        }
+
+        return '';
+    }
+
+    protected function getSiteThemeCss(?object $site): string
+    {
+        try {
+            $siteTheme = new SiteTheme($site);
+            $rendered = $siteTheme->render();
+
+            if ($rendered instanceof \Illuminate\Contracts\View\View) {
+                return $rendered->render();
+            }
+
+            if (is_string($rendered)) {
+                return $rendered;
+            }
+
+            return '';
+        } catch (\Exception $e) {
+            $this->warn("  → Could not load site theme CSS: {$e->getMessage()}");
+        }
+
+        return '';
     }
 }
 

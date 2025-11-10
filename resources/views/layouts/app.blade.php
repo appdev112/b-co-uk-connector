@@ -31,6 +31,16 @@
         <link rel="icon" href="https://www.betting.co.uk/wp-content/uploads/betting-co-uk-favicon-512x512-1-300x300.png.webp" sizes="192x192">
         <link rel="apple-touch-icon" href="https://www.betting.co.uk/wp-content/uploads/betting-co-uk-favicon-512x512-1-300x300.png.webp">
         <meta name="msapplication-TileImage" content="https://www.betting.co.uk/wp-content/uploads/betting-co-uk-favicon-512x512-1-300x300.png.webp">
+
+        @if(!empty($base_css))
+        <style>
+            {!! $base_css !!}
+        </style>
+        @endif
+
+        @if(!empty($site_theme_css))
+        {!! $site_theme_css !!}
+        @endif
     </head>
     <body>
         @include('b-co-uk-connector::layouts.header')
