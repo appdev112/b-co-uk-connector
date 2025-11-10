@@ -49,7 +49,7 @@ class SyncPredictionsCommand extends Command
                 $site = app(SiteService::class)->findById($sourcePrediction->site_id);
 
                 // Get CSS directly from app.css
-                $baseCss = $this->getBaseCss();
+                $baseCss = $site->base_css;
 
                 // Get site theme styles
                 $siteThemeCss = $site->style_tag;
@@ -136,46 +136,6 @@ class SyncPredictionsCommand extends Command
             Prediction::create($data);
             $this->line("  → Created database record");
         }
-    }
-
-    protected function getBaseCss(): string
-    {
-        try {
-            // Read CSS directly from resources/css/app.css in the package
-            $cssPath = __DIR__.'/../../resources/css/app.css';
-
-            if (File::exists($cssPath)) {
-                return File::get($cssPath);
-            }
-
-            $this->warn("  → CSS file not found at: {$cssPath}");
-        } catch (\Exception $e) {
-            $this->warn("  → Could not load base CSS: {$e->getMessage()}");
-        }
-
-        return '';
-    }
-
-    protected function getSiteThemeCss(?object $site): string
-    {
-        try {
-            $siteTheme = new SiteTheme($site);
-            $rendered = $siteTheme->render();
-
-            if ($rendered instanceof \Illuminate\Contracts\View\View) {
-                return $rendered->render();
-            }
-
-            if (is_string($rendered)) {
-                return $rendered;
-            }
-
-            return '';
-        } catch (\Exception $e) {
-            $this->warn("  → Could not load site theme CSS: {$e->getMessage()}");
-        }
-
-        return '';
     }
 }
 
