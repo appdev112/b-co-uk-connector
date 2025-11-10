@@ -2,14 +2,11 @@
 
 namespace Bwise\BcoUkConnector\Commands;
 
-use App\Models\Prediction as SourcePrediction;
-use App\Services\PredictionService;
-use App\Services\SiteService;
-use App\View\Components\SiteTheme;
-use Bwise\BcoUkConnector\Models\Prediction;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class SyncPredictionsCommand extends Command
 {
@@ -19,15 +16,16 @@ class SyncPredictionsCommand extends Command
 
     public function handle(): int
     {
-        $date = $this->option('date') ? \Carbon\Carbon::parse($this->option('date')) : now();
+        $date = $this->option('date') ? Carbon::parse($this->option('date')) : now();
         $dateString = $date->format('Y-m-d');
 
         $this->info("Syncing predictions for date: {$dateString}");
 
-        // Get predictions published on the specified date
-        $predictions = SourcePrediction::query()
-            //->whereDate('published_at', $dateString)
-            //->where('status', \App\Enums\PredictionStatus::Published)
+        // Get predictions published on the specified date from source module (assumed 'predictions' in 'pgsql')
+        $predictions = DB::connection('pgsql')
+            ->table('predictions')
+            //->whereDate('published_at', $dateString) // Uncomment if needed
+            //->where('status', 'published') // Uncomment if needed
             ->get();
 
         if ($predictions->isEmpty()) {
@@ -45,21 +43,27 @@ class SyncPredictionsCommand extends Command
             try {
                 $this->line("Processing: {$sourcePrediction->title} (ID: {$sourcePrediction->id})");
 
-                // Set site context (similar to SetSiteContext middleware)
-                $site = app(SiteService::class)->findById($sourcePrediction->site_id);
+                // Get the site via direct DB access (from 'sites' table in 'pgsql')
+                $site = DB::connection('pgsql')
+                    ->table('sites')
+                    ->where('id', $sourcePrediction->site_id)
+                    ->first();
 
-                // Get CSS directly from app.css
-                $baseCss = $site->base_css;
+                if (!$site) {
+                    $this->warn("  → Site not found for prediction ID {$sourcePrediction->id}. Skipping.");
+                    $failedCount++;
+                    continue;
+                }
 
-                // Get site theme styles
-                $siteThemeCss = $site->style_tag;
+                $baseCss = $site->base_css ?? '';
+                $siteThemeCss = $site->style_tag ?? '';
 
                 // Render full HTML using app.blade.php layout
                 $fullHtml = view('b-co-uk-connector::layouts.app', [
                     'meta_title' => $sourcePrediction->meta_title ?? $sourcePrediction->title,
                     'meta_description' => $sourcePrediction->meta_description ?? '',
-                    'modified_time' => $sourcePrediction->updated_at?->toIso8601String() ?? '',
-                    'content' => $sourcePrediction->content_html,
+                    'modified_time' => isset($sourcePrediction->updated_at) ? Carbon::parse($sourcePrediction->updated_at)->toIso8601String() : '',
+                    'content' => $sourcePrediction->content_html ?? '',
                     'base_css' => $baseCss,
                     'site_theme_css' => $siteThemeCss,
                 ])->render();
@@ -67,7 +71,7 @@ class SyncPredictionsCommand extends Command
                 // Save HTML file
                 $filename = $this->saveHtmlFile($sourcePrediction, $fullHtml);
 
-                // Store in b-co-uk-connector database
+                // Store in b-co-uk-connector database (assumes 'bco_uk_connector_predictions' table is in default connection)
                 $this->storeInDatabase($sourcePrediction, $filename);
 
                 $syncedCount++;
@@ -90,7 +94,8 @@ class SyncPredictionsCommand extends Command
         return self::SUCCESS;
     }
 
-    protected function saveHtmlFile(SourcePrediction $prediction, string $html): string
+    // $sourcePrediction here is a \stdClass from DB (not a model)
+    protected function saveHtmlFile($sourcePrediction, string $html): string
     {
         $storagePath = storage_path('app/public/predictions');
 
@@ -100,7 +105,7 @@ class SyncPredictionsCommand extends Command
         }
 
         // Generate filename based on slug and locale
-        $filename = "{$prediction->slug}.html";
+        $filename = "{$sourcePrediction->slug}.html";
         $filePath = "{$storagePath}/{$filename}";
 
         File::put($filePath, $html);
@@ -110,10 +115,11 @@ class SyncPredictionsCommand extends Command
         return $filename;
     }
 
-    protected function storeInDatabase(SourcePrediction $sourcePrediction, string $filename): void
+    // $sourcePrediction is a \stdClass from DB
+    protected function storeInDatabase($sourcePrediction, string $filename): void
     {
-        // Check if prediction already exists
-        $existingPrediction = Prediction::query()
+        // Check if prediction already exists in b_co_uk table
+        $existingPrediction = DB::connection('b_co_uk')->table('predictions')
             ->where('slug', $sourcePrediction->slug)
             ->where('locale', $sourcePrediction->locale)
             ->first();
@@ -127,15 +133,18 @@ class SyncPredictionsCommand extends Command
             'content' => $filename, // Store the filename as content reference
             'status' => 'published',
             'match_timestamp' => $sourcePrediction->published_at,
+            'updated_at' => now(),
         ];
 
         if ($existingPrediction) {
-            $existingPrediction->update($data);
+            DB::connection('b_co_uk')->table('predictions')
+                ->where('id', $existingPrediction->id)
+                ->update($data);
             $this->line("  → Updated database record");
         } else {
-            Prediction::create($data);
+            $data['created_at'] = now();
+            DB::connection('b_co_uk')->table('predictions')->insert($data);
             $this->line("  → Created database record");
         }
     }
 }
-
