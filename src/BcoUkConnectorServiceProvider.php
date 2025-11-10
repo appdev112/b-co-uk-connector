@@ -3,6 +3,7 @@
 namespace Bwise\BcoUkConnector;
 
 use Bwise\BcoUkConnector\Commands\MigrateCommand;
+use Bwise\BcoUkConnector\Commands\SyncPredictionsCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -19,7 +20,8 @@ class BcoUkConnectorServiceProvider extends PackageServiceProvider
             ->name('b-co-uk-connector')
             ->hasConfigFile()
             ->hasViews()
-            ->hasCommand(MigrateCommand::class);
+            ->hasCommand(MigrateCommand::class)
+            ->hasCommand(SyncPredictionsCommand::class);
     }
 
     public function register(): void
