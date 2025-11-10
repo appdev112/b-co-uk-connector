@@ -47,32 +47,19 @@ class SyncPredictionsCommand extends Command
 
                 // Set site context (similar to SetSiteContext middleware)
                 $site = app(SiteService::class)->findById($sourcePrediction->site_id);
-                Context::add('site_id', $sourcePrediction->site_id);
-                Context::add('site', $site);
-
-                // Get prediction page data
-                $predictionPageData = app(PredictionService::class)->getDataForPredictionPage(
-                    $sourcePrediction->site_id,
-                    $sourcePrediction->locale,
-                    $sourcePrediction->slug,
-                    true
-                );
-
-                // Generate HTML body content
-                $htmlBodyContent = view('predictions.show-plain', $predictionPageData)->render();
 
                 // Get CSS directly from app.css
                 $baseCss = $this->getBaseCss();
 
                 // Get site theme styles
-                $siteThemeCss = $this->getSiteThemeCss($site);
+                $siteThemeCss = $site->style_tag;
 
                 // Render full HTML using app.blade.php layout
                 $fullHtml = view('b-co-uk-connector::layouts.app', [
                     'meta_title' => $sourcePrediction->meta_title ?? $sourcePrediction->title,
                     'meta_description' => $sourcePrediction->meta_description ?? '',
                     'modified_time' => $sourcePrediction->updated_at?->toIso8601String() ?? '',
-                    'content' => $htmlBodyContent,
+                    'content' => $sourcePrediction->content_html,
                     'base_css' => $baseCss,
                     'site_theme_css' => $siteThemeCss,
                 ])->render();
