@@ -24,8 +24,7 @@ class SyncPredictionsCommand extends Command
         // Get predictions published on the specified date from source module (assumed 'predictions' in 'pgsql')
         $predictions = DB::connection('pgsql')
             ->table('predictions')
-            //->whereDate('published_at', $dateString) // Uncomment if needed
-            //->where('status', 'published') // Uncomment if needed
+            ->whereDate('created_at', $dateString)
             ->get();
 
         if ($predictions->isEmpty()) {
